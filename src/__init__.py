@@ -7,6 +7,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
 
+## Load the dataset
 col_names = [
     "pregnant",
     "glucose",
@@ -18,11 +19,13 @@ col_names = [
     "age",
     "label",
 ]
-# load dataset
-PATH = "~/DataMining/pima-indians-diabetes.csv"
+PATH = "resources/pima-indians-diabetes.csv"
 pima = pd.read_csv(PATH, header=0, names=col_names)
 
 print(pima.head())
+##
+
+## Feature selection
 # split dataset in features and target variable
 feature_cols = [
     "pregnant",
@@ -35,24 +38,28 @@ feature_cols = [
 ]
 X = pima[feature_cols]  # Features
 y = pima.label  # Target variable
+##
 
-# Split dataset into training set and test set
+## Data split
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.3, random_state=1
-)  # 70% training and 30% test
+)
+##
 
-# Create Decision Tree classifer object
-clf = DecisionTreeClassifier()
-
-# Train Decision Tree Classifer
-clf = clf.fit(X_train, y_train)
+## Create and train Decision Tree classifer object
+clf = DecisionTreeClassifier(criterion="entropy", max_depth=3).fit(
+    X_train, y_train
+)
 
 # Predict the response for test dataset
 y_pred = clf.predict(X_test)
+##
 
-# Model Accuracy, how often is the classifier correct?
+## Model evaluation
 print("Accuracy:", metrics.accuracy_score(y_test, y_pred))
+##
 
+## Decision Tree visualisation
 dot_data = StringIO()
 export_graphviz(
     clf,
@@ -64,5 +71,6 @@ export_graphviz(
     class_names=["0", "1"],
 )
 graph = pydotplus.graph_from_dot_data(dot_data.getvalue())
-graph.write_png("diabetes.png")
+graph.write_png("resources/diabetes.png")
 Image(graph.create_png())
+##
