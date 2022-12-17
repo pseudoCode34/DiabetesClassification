@@ -20,6 +20,7 @@ lib64/
 parts/
 sdist/
 var/
+wheels/
 *.egg-info/
 .installed.cfg
 *.egg
@@ -88,12 +89,17 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
 # macOS
 .DS_Store
 
 # Vim temp files
-*.swp
-*.swo
+[._]*.s[a-v][a-z]
+!*.svg  # comment out if you don't need vector files
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
 
 # VS Code configs
 .devcontainer
