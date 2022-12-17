@@ -1,76 +1,40 @@
-import pydotplus
-from IPython.display import Image
-from six import StringIO
-from sklearn.tree import export_graphviz
-import pandas as pd
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.model_selection import train_test_split
-from sklearn import metrics
+import pickle
+import streamlit as st
+import numpy as np
+from features import feature_cols
 
-## Load the dataset
-col_names = [
-    "pregnant",
-    "glucose",
-    "bp",
-    "skin",
-    "insulin",
-    "bmi",
-    "pedigree",
-    "age",
-    "label",
-]
-PATH = "resources/pima-indians-diabetes.csv"
-pima = pd.read_csv(PATH, header=0, names=col_names)
 
-print(pima.head())
-##
+def split_list(a_list):
+    half = len(a_list) // 2
+    return a_list[:half], a_list[half:]
 
-## Feature selection
-# split dataset in features and target variable
-feature_cols = [
-    "pregnant",
-    "insulin",
-    "bmi",
-    "age",
-    "glucose",
-    "bp",
-    "pedigree",
-]
-X = pima[feature_cols]  # Features
-y = pima.label  # Target variable
-##
 
-## Data split
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.3, random_state=1
-)
-##
+def print_diagnosis(result: np.ndarray):
+    if result[0] == 0:
+        st.success("Bệnh nhân này không mắc tiểu đường")
+    else:
+        st.error("Bệnh nhân này mắc tiểu đường")
 
-## Create and train Decision Tree classifer object
-clf = DecisionTreeClassifier(criterion="entropy", max_depth=3).fit(
-    X_train, y_train
-)
 
-# Predict the response for test dataset
-y_pred = clf.predict(X_test)
-##
+def input() -> list:
 
-## Model evaluation
-print("Accuracy:", metrics.accuracy_score(y_test, y_pred))
-##
+    first_column_half, last_column_half = split_list(feature_cols)
+    col1, col2 = st.columns(2)
+    with col1:
+        left_input = [st.text_input(col) for col in first_column_half]
+    with col2:
+        right_input = [st.text_input(col) for col in last_column_half]
+    return left_input + right_input
 
-## Decision Tree visualisation
-dot_data = StringIO()
-export_graphviz(
-    clf,
-    out_file=dot_data,
-    filled=True,
-    rounded=True,
-    special_characters=True,
-    feature_names=feature_cols,
-    class_names=["0", "1"],
-)
-graph = pydotplus.graph_from_dot_data(dot_data.getvalue())
-graph.write_png("resources/diabetes.png")
-Image(graph.create_png())
-##
+
+if __name__ == "__main__":
+    with open("src/diagnosis.pkl", "rb") as f:
+        classifier = pickle.load(f)
+
+    title = st.title("Chẩn đoán nhân mắc tiểu đường")
+
+    test_result = input()
+    if st.button("chẩn đoán"):
+        data = np.array(test_result).reshape(1, -1)
+        result = classifier.predict(data)
+        print_diagnosis(result)
