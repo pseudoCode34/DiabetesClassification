@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+"""
+File: core.py
+Author: Nguyễn Khắc Trường
+Email: truong_dev@icloud.com
+Description: Build Decision Classfier model
+Last Modified: 2022-12-27 19:00
+"""
+
 # Save the trained model for further usage
 import pickle
 
@@ -20,26 +29,66 @@ from sklearn import metrics
 from features import feature_cols
 
 
-def load_data(PATH):
+def preprocessing(data):
+    """There are 3 main phases involved in preprocessing the data. First, it is
+    required to clean the data crawled earlier. What if there is some missing
+    and noisy data? It is highly recommended that tuple be discared and absent
+    values be filled in manually by mean or the most probable value. To deal
+    with noisy data, binning method, regression and clustering would be
+    considered. Now, it is high time to transform the data, i.e, normalise,
+    feature selection, generate concept hierachy. But, in this circumstance, it
+    is redundant. Ultimately, we proceed to the very last step of preprocessing,
+    data reduction. Either performing data cube arrgregation, selecting a subset
+    of attributes, reducing numerosity or dropping redundant dimensionality.
+
+    Parameters
+    ----------
+    data: DataFrame
+        A set of data crawled earlier
+
+    Returns
+    -------
+    train_arguments, train_results, test_arguments, test_results : DataFrame
+
+    """
+    if data.isnull().sum().sum() != 0:
+        raise ValueError("There is some missing data in this data set")
+
+    data.drop_duplicates(in_place=True)
+    health_status_measures, diabetes_states = select_features_from(feature_cols)
+    (
+        train_arguments,
+        test_arguments,
+        train_results,
+        test_results,
+    ) = train_test_split(
+        health_status_measures,
+        diabetes_states,
+        test_size=0.3,
+        random_state=1,
+    )
+    return train_arguments, train_results, test_arguments, test_results
+
+
+def load_data(URL):
     """Load the dataset using pandas' read CSV function and print 5 first rows
 
     Parameters
     ----------
-    PATH : str
+    URL : str
         The directory of data set. It can be relative or absolute to the current
         directory, check via ```pwd```
 
     Returns
-    ----------
-    data_set : DataFrame
+    -------
+    data: DataFrame
         Object containing data
     """
-    data_set = pd.read_csv(PATH)
-    print(data_set.head())
-    return data_set
+    data = pd.read_csv(URL)
+    return data
 
 
-def feature_selection(feature_cols):
+def select_features_from(label):
     """Split the dataset into features and target variable
 
     Parameters
@@ -48,70 +97,51 @@ def feature_selection(feature_cols):
         List of labels of the arguments(dependant variables) assgined
 
     Returns
-    ----------
-    health_status_measures : DataFrame
-        List of arguements
-
-    diabetes_states : DataFrame
-        List of target variables(independant ones)
+    -------
+    health_status_measures, diabetes_states : DataFrame
+        List of arguments(features) and target variables(independant ones)
     """
-    health_status_measures = data_set[feature_cols]
+    health_status_measures = data_set[label]
     diabetes_states = data_set.Outcome
     return health_status_measures, diabetes_states
 
 
-# FIXME: How to refactor this to a new function? Should I?
-# Data split
-(
-    train_arguments,
-    test_arguments,
-    train_results,
-    test_results,
-) = train_test_split(
-    health_status_measures,
-    diabetes_states,
-    test_size=0.3,
-    random_state=1,
-)
-
-
-def build_decision_tree_model(classifier, test_arguments):
+# FIXME: Could I delete classifier from paramlist?
+def build_decision_tree_model(test_arguments):
     """Once create and train Decision Tree classifer object, it's time to
-        predict the response of the test dataset
+    predict the response of the test dataset
+
+    Create decision tree via entropy function and optimise it to contain 3
+    depths at most so that overfitting can be minimised. If max_depth is set to
+    None(default), nodes are expanded until all the leaves contain less than
+    min_samples_split samples. The higher value of maximum depth causes
+    overfitting, and a lower value causes underfitting.
 
     Parameters
     ----------
-    classifier : DecisionTreeClassifier object
-        Create decision tree via entropy function and optimise it to contain at
-        most 3 depths so that overfitting can be minimised. If max_depth is set
-        to None(default), nodes are expanded until all the leaves contain less
-        than min_samples_split samples. The higher value of maximum depth causes
-        overfitting, and a lower value causes underfitting.
-
-        Supported criteria are “gini”(default) for the Gini index and “entropy”
-        for the information gain. Both are provided as differnt attribute
-        selection measures.
-
     test_arguments: DataFrame
         A proportion of the orginal data set containing inputs for testing
         purpose only.
 
     Returns
-    ----------
-    data_set : DataFrame
-        Object containing data
+    -------
+    clf : DecisionTreeClassifier object
+    predicted_results : DataFrame
     """
-    # FIXME : write docs (and modify this function to fit) 2 following variables
-    classifier = DecisionTreeClassifier(criterion="entropy", max_depth=3).fit(
+
+    # Supported criteria are “gini”(default) for the Gini index and “entropy”
+    # for the information gain. Both are provided as differnt attribute
+    # selection measures.
+    clf = DecisionTreeClassifier(criterion="entropy", max_depth=3).fit(
         train_arguments, train_results
     )
 
-    predicted_responses = classifier.predict(test_arguments)
-    return predicted_responses, classifier
+    predicted_results = clf.predict(test_arguments)
+    return clf, predicted_results
 
 
 def evaluate(actual_results, calculated_responses):
-    """Estimate how accurately the classifier or model can predict the type of 
+    """Estimate how accurately the classifier or model can predict the type of
     cultivars.
 
     Parameters
@@ -124,8 +154,17 @@ def evaluate(actual_results, calculated_responses):
     print("Accuracy:", accuracy)
 
 
-# FIXME: Should return the path to image and take dot_data as arguments or initialise a local variable image_dir?
-def visualise(image_dir):
+def visualise(decision_tree, image_dir):
+    """Draw the decision tree
+
+    Parameters
+    ----------
+    decision_tree : DecisionTreeClassifier object
+
+    image_dir : str
+        Directory to export the image
+    """
+    dot_data = StringIO()
     export_graphviz(
         decision_tree,
         out_file=dot_data,
@@ -138,22 +177,23 @@ def visualise(image_dir):
     graph = pydotplus.graph_from_dot_data(dot_data.getvalue())
     graph.write_png(image_dir)
     Image(graph.create_png())
-    return graph
 
-
-graph = visualise(dot_data, feature_cols)
 
 if __name__ == "__main__":
-    PATH = "resources/pima-indians-diabetes.csv"
-    data_set = load_data(PATH)
+    URL = "resources/pima-indians-diabetes.csva"
+    IMAGE_DIR = "resources/diabetes.png"
 
-    health_status_measures, diabetes_states = feature_selection(feature_cols)
-    predicted_responses, classifier = build_decision_tree_model(
-        classifier, test_arguments
-    )
-
+    data_set = load_data(URL)
+    (
+        train_arguments,
+        train_results,
+        test_arguments,
+        test_results,
+    ) = preprocessing(data_set)
+    classifier, predicted_responses = build_decision_tree_model(test_arguments)
     evaluate(test_results, predicted_responses)
+    visualise(classifier, IMAGE_DIR)
 
-    dot_data = StringIO()
+    # save decision tree model for further use, no need to rebuild
     with open("src/diagnosis.pkl", "wb") as file:
         pickle.dump(classifier, file)
