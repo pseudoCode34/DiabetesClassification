@@ -1,29 +1,36 @@
+# Load the trained model
 import pickle
+
+# Deploy into a web interface
 import streamlit as st
+
+# Deal with the type arguments of classifier object
 import numpy as np
+
+# Crawl the reduced table's names
 from features import feature_cols
 
 
-def split_list(a_list):
-    half = len(a_list) // 2
-    return a_list[:half], a_list[half:]
+def split_half(list):
+    half = len(list) // 2
+    return list[:half], list[half:]
 
 
-def print_diagnosis(result: np.ndarray):
-    if result[0] == 0:
+def print(diagnosis: np.ndarray):
+    if diagnosis[0] == 0:
         st.success("Bệnh nhân này không mắc tiểu đường")
     else:
         st.error("Bệnh nhân này mắc tiểu đường")
 
 
 def input() -> list:
-
-    first_column_half, last_column_half = split_list(feature_cols)
+    left_column, right_column = split_half(feature_cols)
     col1, col2 = st.columns(2)
     with col1:
-        left_input = [st.text_input(col) for col in first_column_half]
+        left_input = [st.text_input(col) for col in left_column]
     with col2:
-        right_input = [st.text_input(col) for col in last_column_half]
+        right_input = [st.text_input(col) for col in right_column]
+
     return left_input + right_input
 
 
@@ -33,8 +40,8 @@ if __name__ == "__main__":
 
     title = st.title("Chẩn đoán nhân mắc tiểu đường")
 
-    test_result = input()
-    if st.button("chẩn đoán"):
-        data = np.array(test_result).reshape(1, -1)
-        result = classifier.predict(data)
-        print_diagnosis(result)
+    patient_health_indexes = input()
+    if st.button("Chẩn đoán"):
+        data = np.array(patient_health_indexes).reshape(1, -1)
+        diagnosis = classifier.predict(data)
+        print(diagnosis)
