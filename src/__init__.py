@@ -23,7 +23,8 @@ def print(diagnosis: np.ndarray):
         st.error("Bệnh nhân này mắc tiểu đường")
 
 
-def input() -> list:
+def input_measures() -> list:
+    # Take inputs from 2 columns, just to get advantage screen size
     left_column, right_column = split_half(feature_cols)
     col1, col2 = st.columns(2)
     with col1:
@@ -39,8 +40,10 @@ if __name__ == "__main__":
         classifier = pickle.load(f)
 
     title = st.title("Chẩn đoán nhân mắc tiểu đường")
-
-    patient_health_indexes = input()
+    # As I hate the design of st.number_input(), input is retrieved by 
+    # st.text_input(), which returns str. So I must convert a list str to 2 
+    # dimensions np.array of float [[]] matching the type of classfier.predict()
+    patient_health_indexes = input_measures()
     if st.button("Chẩn đoán"):
         data = np.array(patient_health_indexes).reshape(1, -1)
         diagnosis = classifier.predict(data)
